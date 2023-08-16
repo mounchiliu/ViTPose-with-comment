@@ -42,18 +42,18 @@ Note:
 - AttributeError: module 'numpy' has no attribute 'int'.
 `np.int` was a deprecated alias for the builtin `int`. To avoid this error in existing code, use `int` by itself. Doing this will not modify any behavior and is safe. When replacing `np.int`, you may wish to use e.g. `np.int64` or `np.int32` to specify the precision. If you wish to review your current use, check the release note link for additional information.
 
-Solution: 将代码中的`np.int`修改为：`np.int_`,`np.int32`或者`np.int64`
+  Solution: 将代码中的`np.int`修改为：`np.int_`,`np.int32`或者`np.int64`
 
 
 - `qt.qpa.plugin: Could not load the Qt platform plugin "xcb" in "/home/mengqi/work/Env/anaconda3/lib/python3.10/site-packages/cv2/qt/plugins" even though it was found.
 This application failed to start because no Qt platform plugin could be initialized. Reinstalling the application may fix this problem.
 Available platform plugins are: xcb, eglfs, minimal, minimalegl, offscreen, vnc, webgl.`
   
-Solution: delete `libxcb.so` works
+  Solution: delete `libxcb.so` works
 
 - ImportError: cannot import name 'inference_top_down_pose_model' from 'mmpose.apis' (/home/mengqi/work/Env/anaconda3/lib/python3.10/site-packages/mmpose/apis/__init__.py)
 
-Solution: mmpose版本兼容问题，(工程内规定mmcv>1.38且<=1.5, 并且提供了custom mmpose），如果先导入mmcv再mmpose，就会在系统环境内搜索mmpose，而工程实现使用的是作者提供的mmpose库，因此需要更换导入的顺序，即在报错的代码中（e.g. body3d_two_stage_img_demo.py, 修改import库的顺序，import mmpose 之后再 import mmcv）
+  Solution: mmpose版本兼容问题，(工程内规定mmcv>1.38且<=1.5, 并且提供了custom mmpose），如果先导入mmcv再mmpose，就会在系统环境内搜索mmpose，而工程实现使用的是作者提供的mmpose库，因此需要更换导入的顺序，即在报错的代码中（e.g. body3d_two_stage_img_demo.py, 修改import库的顺序，import mmpose 之后再 import mmcv）
 
 ### 2. Train the model
 - 注意:对于自定义数据集，需在configs文件下指定dataset相关路径，如`ViTPose_base_coco_256x192.py`中需要指定`bbox_file`、`ann_file``、img_prefix`
@@ -71,7 +71,7 @@ configs/body/2d_kpt_sview_rgb_img/topdown_heatmap/coco/ViTPose_base_coco_256x192
 
 - 运行demo测试
 ```commandline
-python demo/body3d_two_stage_img_demo.py \
+python demo/body3d_two_stage_img_demo.py I am running a few minutes late; my previous meeting is running over.
     configs/body/3d_kpt_sview_rgb_img/pose_lift/h36m/simplebaseline3d_h36m.py \
     https://download.openmmlab.com/mmpose/body3d/simple_baseline/simple3Dbaseline_h36m-f0ad73a4_20210419.pth \
     --json-file tests/data/h36m/h36m_coco.json \
