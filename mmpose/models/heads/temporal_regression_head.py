@@ -86,6 +86,7 @@ class TemporalRegressionHead(nn.Module):
         N = output.shape[0]
         return output.reshape(N, self.num_joints, 3)
 
+    # loss function for baseline 3D
     def get_loss(self, output, target, target_weight):
         """Calculate keypoint loss.
 
@@ -121,7 +122,7 @@ class TemporalRegressionHead(nn.Module):
             if target_weight is None:
                 target_weight = target.new_ones(target.shape)
             assert target.dim() == 3 and target_weight.dim() == 3
-            losses['reg_loss'] = self.loss(output, target, target_weight)
+            losses['reg_loss'] = self.loss(output, target, target_weight)  # 计算output与target之间的的MSE
 
         return losses
 
@@ -188,7 +189,7 @@ class TemporalRegressionHead(nn.Module):
 
         transformed_output = np.zeros_like(output_)
         for i in range(N):
-            transformed_output[i, :, :] = compute_similarity_transform(
+            transformed_output[i, :, :] = compute_similarity_transform(  # p_mpjpe:对预测点和target进行刚体对齐，再计算每个点之间的欧式距离，然后求平均
                 output_[i, :, :], target_[i, :, :])
         p_mpjpe = np.mean(
             np.linalg.norm(

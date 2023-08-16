@@ -12,7 +12,7 @@ from ..builder import HEADS
 import torch.nn.functional as F
 from .topdown_heatmap_base_head import TopdownHeatmapBaseHead
 
-
+# The classic decoder
 @HEADS.register_module()
 class TopdownHeatmapSimpleHead(TopdownHeatmapBaseHead):
     """Top-down heatmap simple head. paper ref: Bin Xiao et al. ``Simple
@@ -77,6 +77,7 @@ class TopdownHeatmapSimpleHead(TopdownHeatmapBaseHead):
         if extra is not None and not isinstance(extra, dict):
             raise TypeError('extra should be dict or None.')
 
+        # make deconvolution layer
         if num_deconv_layers > 0:
             self.deconv_layers = self._make_deconv_layer(
                 num_deconv_layers,
@@ -89,7 +90,10 @@ class TopdownHeatmapSimpleHead(TopdownHeatmapBaseHead):
             raise ValueError(
                 f'num_deconv_layers ({num_deconv_layers}) should >= 0.')
 
+        # make final layer
         identity_final_layer = False
+        # 根据final convolution kernel size，定义padding
+        # ViT base： kernel_size = 1x1, padding = 0
         if extra is not None and 'final_conv_kernel' in extra:
             assert extra['final_conv_kernel'] in [0, 1, 3]
             if extra['final_conv_kernel'] == 3:
@@ -107,6 +111,7 @@ class TopdownHeatmapSimpleHead(TopdownHeatmapBaseHead):
         if identity_final_layer:
             self.final_layer = nn.Identity()
         else:
+            # num_deconv_filters作为input channel
             conv_channels = num_deconv_filters[
                 -1] if num_deconv_layers > 0 else self.in_channels
 
@@ -116,6 +121,7 @@ class TopdownHeatmapSimpleHead(TopdownHeatmapBaseHead):
                 num_conv_kernels = extra.get('num_conv_kernels',
                                              [1] * num_conv_layers)
 
+                # vitpose b,不走这，没有定义num_conv_layers，因此为0,不进循环
                 for i in range(num_conv_layers):
                     layers.append(
                         build_conv_layer(
@@ -129,6 +135,7 @@ class TopdownHeatmapSimpleHead(TopdownHeatmapBaseHead):
                         build_norm_layer(dict(type='BN'), conv_channels)[1])
                     layers.append(nn.ReLU(inplace=True))
 
+            # 定义输出层： input_channel: deconvolution输出结果; out_channel：特征点的个数
             layers.append(
                 build_conv_layer(
                     cfg=dict(type='Conv2d'),
@@ -196,9 +203,12 @@ class TopdownHeatmapSimpleHead(TopdownHeatmapBaseHead):
 
     def forward(self, x):
         """Forward function."""
-        x = self._transform_inputs(x)
+        # x: bactch * dim_vector * Hp * Wp
+        x = self._transform_inputs(x)  # do the transformation based on the config
+        # pass through deconvolution layers
+        # up-sampling feature maps, and increase the num of channels
         x = self.deconv_layers(x)
-        x = self.final_layer(x)
+        x = self.final_layer(x)  # get keypoint detected results from the final layer
         return x
 
     def inference_model(self, x, flip_pairs=None):
@@ -314,6 +324,8 @@ class TopdownHeatmapSimpleHead(TopdownHeatmapBaseHead):
                         f'!= length of num_kernels({len(num_kernels)})'
             raise ValueError(error_msg)
 
+        # 每层deconvolution，根据paper中classic decoder：
+        # 包含deconvolution,batch normalization, relu
         layers = []
         for i in range(num_layers):
             kernel, padding, output_padding = \

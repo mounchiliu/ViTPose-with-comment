@@ -12,6 +12,7 @@ from timm.models.layers import drop_path, to_2tuple, trunc_normal_
 from ..builder import BACKBONES
 from .base_backbone import BaseBackbone
 
+
 def get_abs_pos(abs_pos, h, w, ori_h, ori_w, has_cls_token=True):
     """
     Calculate absolute positional embeddings. If needed, resize embeddings and remove cls_token
@@ -40,23 +41,26 @@ def get_abs_pos(abs_pos, h, w, ori_h, ori_w, has_cls_token=True):
 
     else:
         new_abs_pos = abs_pos
-    
+
     if cls_token is not None:
         new_abs_pos = torch.cat([cls_token, new_abs_pos], dim=1)
     return new_abs_pos
 
+
 class DropPath(nn.Module):
     """Drop paths (Stochastic Depth) per sample  (when applied in main path of residual blocks).
     """
+
     def __init__(self, drop_prob=None):
         super(DropPath, self).__init__()
         self.drop_prob = drop_prob
 
     def forward(self, x):
         return drop_path(x, self.drop_prob, self.training)
-    
+
     def extra_repr(self):
         return 'p={}'.format(self.drop_prob)
+
 
 class Mlp(nn.Module):
     def __init__(self, in_features, hidden_features=None, out_features=None, act_layer=nn.GELU, drop=0.):
@@ -69,16 +73,17 @@ class Mlp(nn.Module):
         self.drop = nn.Dropout(drop)
 
     def forward(self, x):
-        x = self.fc1(x)
-        x = self.act(x)
-        x = self.fc2(x)
-        x = self.drop(x)
+        x = self.fc1(x)  # 全连接层
+        x = self.act(x)  # activation functon
+        x = self.fc2(x)  # 全连接层2
+        x = self.drop(x)  # dropout
         return x
+
 
 class Attention(nn.Module):
     def __init__(
             self, dim, num_heads=8, qkv_bias=False, qk_scale=None, attn_drop=0.,
-            proj_drop=0., attn_head_dim=None,):
+            proj_drop=0., attn_head_dim=None, ):
         super().__init__()
         self.num_heads = num_heads
         head_dim = dim // num_heads
@@ -88,7 +93,7 @@ class Attention(nn.Module):
             head_dim = attn_head_dim
         all_head_dim = head_dim * self.num_heads
 
-        self.scale = qk_scale or head_dim ** -0.5
+        self.scale = qk_scale or head_dim ** -0.5  # Reference: Attention Is All You Need, scale factor for the dot product attention
 
         self.qkv = nn.Linear(dim, all_head_dim * 3, bias=qkv_bias)
 
@@ -97,36 +102,46 @@ class Attention(nn.Module):
         self.proj_drop = nn.Dropout(proj_drop)
 
     def forward(self, x):
-        B, N, C = x.shape
-        qkv = self.qkv(x)
-        qkv = qkv.reshape(B, N, 3, self.num_heads, -1).permute(2, 0, 3, 1, 4)
-        q, k, v = qkv[0], qkv[1], qkv[2]   # make torchscript happy (cannot use tensor as tuple)
+        B, N, C = x.shape  # batch_num patch_num vector_dim
+        qkv = self.qkv(x)  # 对x使用QKV全连接层用于获取qkv向量 #qkv: batch_num patch_num vector_dim*3
+        # qkv.reshape(B, N, 3, self.num_heads, -1): batch_num patch_num 3 num_head vector_dim
+        # 3 for q/k/v,将qkv组合到了一起
+        qkv = qkv.reshape(B, N, 3, self.num_heads, -1).permute(2, 0, 3, 1,
+                                                               4)  # 3 * B * num_head * patch_num * vector_num
+        # 分别取出q、k、v对应矩阵
+        q, k, v = qkv[0], qkv[1], qkv[2]  # make torchscript happy (cannot use tensor as tuple)
 
+        # Reference: Attention Is All You Need, define a scale factor to scale the dot products attention
         q = q * self.scale
-        attn = (q @ k.transpose(-2, -1))
+        # q,k: B * num_head * num_patch * dim_vector
+        # k.transpose(-2, -1): B * num_head * dim_vector * num_patch
+        # @ for multiply, @是用来对tensor进行矩阵相乘;*用来对tensor进行矩阵行逐元素相乘
+        attn = (q @ k.transpose(-2, -1))  # 计算attention score, attn: batch_num * head_num * patch_num * patch_num
 
-        attn = attn.softmax(dim=-1)
-        attn = self.attn_drop(attn)
+        attn = attn.softmax(dim=-1)  # 使用softmax对attention socre转化为权重，对最后一个维度计算权重
+        attn = self.attn_drop(attn)  # drop out some attention
 
-        x = (attn @ v).transpose(1, 2).reshape(B, N, -1)
-        x = self.proj(x)
-        x = self.proj_drop(x)
+        x = (attn @ v).transpose(1, 2).reshape(B, N, -1)  # apply attention score on v and reshape
+        x = self.proj(x)  # 全连接层，再一次获得每一个位置的特征与其他位置的关系
+        x = self.proj_drop(x)  # 全连接层，dropout
 
         return x
 
+
+# vision transformer encoder
 class Block(nn.Module):
 
-    def __init__(self, dim, num_heads, mlp_ratio=4., qkv_bias=False, qk_scale=None, 
-                 drop=0., attn_drop=0., drop_path=0., act_layer=nn.GELU, 
+    def __init__(self, dim, num_heads, mlp_ratio=4., qkv_bias=False, qk_scale=None,
+                 drop=0., attn_drop=0., drop_path=0., act_layer=nn.GELU,
                  norm_layer=nn.LayerNorm, attn_head_dim=None
                  ):
         super().__init__()
-        
+
         self.norm1 = norm_layer(dim)
         self.attn = Attention(
             dim, num_heads=num_heads, qkv_bias=qkv_bias, qk_scale=qk_scale,
             attn_drop=attn_drop, proj_drop=drop, attn_head_dim=attn_head_dim
-            )
+        )
 
         # NOTE: drop path for stochastic depth, we shall see if this is better than dropout here
         self.drop_path = DropPath(drop_path) if drop_path > 0. else nn.Identity()
@@ -135,7 +150,15 @@ class Block(nn.Module):
         self.mlp = Mlp(in_features=dim, hidden_features=mlp_hidden_dim, act_layer=act_layer, drop=drop)
 
     def forward(self, x):
+        # 1. layer normalization
+        # 2. multi-head attention
+        # 3. drop out several sample results
+        # 4. residual connect
         x = x + self.drop_path(self.attn(self.norm1(x)))
+        # 1. layer normalization
+        # 2. mlp
+        # 3. drop path
+        # 4. residual connect
         x = x + self.drop_path(self.mlp(self.norm2(x)))
         return x
 
@@ -143,6 +166,7 @@ class Block(nn.Module):
 class PatchEmbed(nn.Module):
     """ Image to Patch Embedding
     """
+
     def __init__(self, img_size=224, patch_size=16, in_chans=3, embed_dim=768, ratio=1):
         super().__init__()
         img_size = to_2tuple(img_size)
@@ -154,14 +178,16 @@ class PatchEmbed(nn.Module):
         self.patch_size = patch_size
         self.num_patches = num_patches
 
-        self.proj = nn.Conv2d(in_chans, embed_dim, kernel_size=patch_size, stride=(patch_size[0] // ratio), padding=4 + 2 * (ratio//2-1))
+        self.proj = nn.Conv2d(in_chans, embed_dim, kernel_size=patch_size, stride=(patch_size[0] // ratio),
+                              padding=4 + 2 * (ratio // 2 - 1))
 
     def forward(self, x, **kwargs):
         B, C, H, W = x.shape
-        x = self.proj(x)
-        Hp, Wp = x.shape[2], x.shape[3]
+        # x_projected = B * dim_vector * Hp * Wp
+        x = self.proj(x)  # convolution to get feature of image patches, patch_size = 16*16
+        Hp, Wp = x.shape[2], x.shape[3]  # Hp, Wp为对patch卷积后的特征图的大小,num_patch = Hp*Wp
 
-        x = x.flatten(2).transpose(1, 2)
+        x = x.flatten(2).transpose(1, 2)  # x.flatten(2): batch * dim_vector * num_patch
         return x, (Hp, Wp)
 
 
@@ -169,6 +195,7 @@ class HybridEmbed(nn.Module):
     """ CNN Feature Map Embedding
     Extract feature map from CNN, flatten, project to embedding dim.
     """
+
     def __init__(self, backbone, img_size=224, feature_size=None, in_chans=3, embed_dim=768):
         super().__init__()
         assert isinstance(backbone, nn.Module)
@@ -197,13 +224,14 @@ class HybridEmbed(nn.Module):
         return x
 
 
+# Vision transformer module
 @BACKBONES.register_module()
 class ViT(BaseBackbone):
 
     def __init__(self,
                  img_size=224, patch_size=16, in_chans=3, num_classes=80, embed_dim=768, depth=12,
                  num_heads=12, mlp_ratio=4., qkv_bias=False, qk_scale=None, drop_rate=0., attn_drop_rate=0.,
-                 drop_path_rate=0., hybrid_backbone=None, norm_layer=None, use_checkpoint=False, 
+                 drop_path_rate=0., hybrid_backbone=None, norm_layer=None, use_checkpoint=False,
                  frozen_stages=-1, ratio=1, last_norm=True,
                  patch_padding='pad', freeze_attn=False, freeze_ffn=False,
                  ):
@@ -223,22 +251,29 @@ class ViT(BaseBackbone):
             self.patch_embed = HybridEmbed(
                 hybrid_backbone, img_size=img_size, in_chans=in_chans, embed_dim=embed_dim)
         else:
+            # patch embedding
             self.patch_embed = PatchEmbed(
                 img_size=img_size, patch_size=patch_size, in_chans=in_chans, embed_dim=embed_dim, ratio=ratio)
         num_patches = self.patch_embed.num_patches
 
         # since the pretraining model has class token
+        # add class token
         self.pos_embed = nn.Parameter(torch.zeros(1, num_patches + 1, embed_dim))
 
+        # define drop path rate for each depth
+        # drop path是一种正则化手段
+        # 结合drop_path的调用，若x为输入的张量，其通道为[B,C,H,W]
+        # 那么drop_path的含义为在一个Batch_size中，随机有drop_prob的样本，不经过主干，而直接由分支进行恒等映射。
         dpr = [x.item() for x in torch.linspace(0, drop_path_rate, depth)]  # stochastic depth decay rule
 
+        # 根据定义的层数，依次define transformer encoder
         self.blocks = nn.ModuleList([
             Block(
                 dim=embed_dim, num_heads=num_heads, mlp_ratio=mlp_ratio, qkv_bias=qkv_bias, qk_scale=qk_scale,
                 drop=drop_rate, attn_drop=attn_drop_rate, drop_path=dpr[i], norm_layer=norm_layer,
-                )
+            )
             for i in range(depth)])
-
+        # last layer normalization
         self.last_norm = norm_layer(embed_dim) if last_norm else nn.Identity()
 
         if self.pos_embed is not None:
@@ -310,23 +345,31 @@ class ViT(BaseBackbone):
     def no_weight_decay(self):
         return {'pos_embed', 'cls_token'}
 
+    # forward函数
     def forward_features(self, x):
+        # 1. embedding： Patch embedding + Position Embedding
+        # x:input image: batch * 3 * h * w
         B, C, H, W = x.shape
-        x, (Hp, Wp) = self.patch_embed(x)
+        # x_embedded: batch * num_patch * dim_vector
+        # Hp, Wp: 为高、宽上的patch个数，patch_num = Hp * Wp
+        x, (Hp, Wp) = self.patch_embed(x)  # do the patch embedding for input image
 
+        # position embedding
         if self.pos_embed is not None:
             # fit for multiple GPU training
             # since the first element for pos embed (sin-cos manner) is zero, it will cause no difference
-            x = x + self.pos_embed[:, 1:] + self.pos_embed[:, :1]
+            x = x + self.pos_embed[:, 1:] + self.pos_embed[:, :1]  # cls token加到x其他token上，而不是拼接
 
+        # 2. Transformer Encoder with multiple layers
         for blk in self.blocks:
             if self.use_checkpoint:
                 x = checkpoint.checkpoint(blk, x)
             else:
                 x = blk(x)
-
+        # x: batch * num_patches * dim_vector
         x = self.last_norm(x)
-
+        # x.permute(0, 2, 1): batch * dim_vector * num_patches
+        # xp = batch * dim_vector * Hp * Wp
         xp = x.permute(0, 2, 1).reshape(B, -1, Hp, Wp).contiguous()
 
         return xp

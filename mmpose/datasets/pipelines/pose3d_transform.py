@@ -451,7 +451,7 @@ class PoseSequenceToTensor:
 
     def __call__(self, results):
         assert self.item in results
-        seq = results[self.item]
+        seq = results[self.item]  # batch * (num_key+1) * 2, 1 for root location
 
         assert isinstance(seq, np.ndarray)
         assert seq.ndim in {2, 3}
@@ -460,7 +460,7 @@ class PoseSequenceToTensor:
             seq = seq[None, ...]
 
         T = seq.shape[0]
-        seq = seq.transpose(1, 2, 0).reshape(-1, T)
+        seq = seq.transpose(1, 2, 0).reshape(-1, T)  # transpose: (num_key+1) * 2 * batch, reshape: 第二维度是batch，第一维度自适应调整
         results[self.item] = torch.from_numpy(seq)
 
         return results

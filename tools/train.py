@@ -166,7 +166,9 @@ def main():
     cfg.seed = seed
     meta['seed'] = seed
 
-    model = build_posenet(cfg.model)
+    # 根据config类型跳转至mmpose / models / detectots下的相应模型构造文件
+    # e.g. top_down.py
+    model = build_posenet(cfg.model)  # construct model network
     datasets = [build_dataset(cfg.data.train)]
 
     if len(cfg.workflow) == 2:

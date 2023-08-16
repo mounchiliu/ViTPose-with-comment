@@ -71,7 +71,7 @@ class TopdownHeatmapBaseHead(nn.Module):
                 score[i] = np.array(img_metas[i]['bbox_score']).reshape(-1)
             if bbox_ids is not None:
                 bbox_ids.append(img_metas[i]['bbox_id'])
-
+        # Get final keypoint predictions from heatmaps and transform them back to the image
         preds, maxvals = keypoints_from_heatmaps(
             output,
             c,

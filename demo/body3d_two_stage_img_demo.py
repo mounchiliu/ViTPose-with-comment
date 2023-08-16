@@ -124,7 +124,7 @@ def main():
 
     coco = COCO(args.json_file)
 
-    # First stage: 2D pose detection
+    # First stage: 2D pose detection: load 2d results from jason file or perform SOTA 2D pose detection
     pose_det_results_list = []
     if args.only_second_stage:
         from mmpose.apis.inference import _xywh2xyxy

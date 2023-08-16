@@ -84,11 +84,11 @@ def _get_max_preds(heatmaps):
 
     N, K, _, W = heatmaps.shape
     heatmaps_reshaped = heatmaps.reshape((N, K, -1))
-    idx = np.argmax(heatmaps_reshaped, 2).reshape((N, K, 1))
+    idx = np.argmax(heatmaps_reshaped, 2).reshape((N, K, 1))  # 在每个特征图中找最大值位置，每个特征图对应一个关节点（top-down，一张图内只有一个人的所有关节点）
     maxvals = np.amax(heatmaps_reshaped, 2).reshape((N, K, 1))
 
     preds = np.tile(idx, (1, 1, 2)).astype(np.float32)
-    preds[:, :, 0] = preds[:, :, 0] % W
+    preds[:, :, 0] = preds[:, :, 0] % W  # 根据id，找到其在图中的u、v坐标
     preds[:, :, 1] = preds[:, :, 1] // W
 
     preds = np.where(np.tile(maxvals, (1, 1, 2)) > 0.0, preds, -1)
@@ -331,7 +331,7 @@ def _taylor(heatmap, coord):
             coord += offset
     return coord
 
-
+# upd for post processing of human pose estimation
 def post_dark_udp(coords, batch_heatmaps, kernel=3):
     """DARK post-pocessing. Implemented by udp. Paper ref: Huang et al. The
     Devil is in the Details: Delving into Unbiased Data Processing for Human
@@ -363,9 +363,9 @@ def post_dark_udp(coords, batch_heatmaps, kernel=3):
     assert (B == 1 or B == N)
     for heatmaps in batch_heatmaps:
         for heatmap in heatmaps:
-            cv2.GaussianBlur(heatmap, (kernel, kernel), 0, heatmap)
-    np.clip(batch_heatmaps, 0.001, 50, batch_heatmaps)
-    np.log(batch_heatmaps, batch_heatmaps)
+            cv2.GaussianBlur(heatmap, (kernel, kernel), 0, heatmap)  # 1. Gaussian blur each heatmap
+    np.clip(batch_heatmaps, 0.001, 50, batch_heatmaps)  # clip values on heatmaps
+    np.log(batch_heatmaps, batch_heatmaps)  # take log of the values
 
     batch_heatmaps_pad = np.pad(
         batch_heatmaps, ((0, 0), (0, 0), (1, 1), (1, 1)),
@@ -566,7 +566,7 @@ def keypoints_from_heatmaps(heatmaps,
     N, K, H, W = heatmaps.shape
     if use_udp:
         if target_type.lower() == 'GaussianHeatMap'.lower():
-            preds, maxvals = _get_max_preds(heatmaps)
+            preds, maxvals = _get_max_preds(heatmaps)  # get max position in heatmaps
             preds = post_dark_udp(preds, heatmaps, kernel=kernel)
         elif target_type.lower() == 'CombinedTarget'.lower():
             for person_heatmaps in heatmaps:

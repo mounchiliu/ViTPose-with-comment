@@ -95,6 +95,9 @@ class Compose:
         Returns:
             dict: Transformed data.
         """
+        # for 3d baseline
+        # transforms for data augmentation which is defined in config,
+        # augmentation methods defined in pose3d_transform.py e.g. GetRootCenteredPose, Collect
         for t in self.transforms:
             data = t(data)
             if data is None:
@@ -109,7 +112,7 @@ class Compose:
         format_string += '\n)'
         return format_string
 
-
+# for baseline3d, collect 2d kps
 @PIPELINES.register_module()
 class Collect:
     """Collect data from the loader relevant to the specific task.
@@ -157,7 +160,7 @@ class Collect:
                 key_src = key_tgt = key
             data[key_tgt] = results[key_src]
 
-        meta = {}
+        meta = {}  # do data augmentation
         if len(self.meta_keys) != 0:
             for key in self.meta_keys:
                 if isinstance(key, tuple):

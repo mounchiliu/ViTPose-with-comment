@@ -45,7 +45,7 @@ class TopDown(BasePose):
         super().__init__()
         self.fp16_enabled = False
 
-        self.backbone = builder.build_backbone(backbone)
+        self.backbone = builder.build_backbone(backbone)  # 跳转至mmpose/models/backbones下对应文件
 
         self.train_cfg = train_cfg
         self.test_cfg = test_cfg
@@ -142,11 +142,13 @@ class TopDown(BasePose):
 
     def forward_train(self, img, target, target_weight, img_metas, **kwargs):
         """Defines the computation performed at every call when training."""
-        output = self.backbone(img)
+        # output(features): batch * dim_vector * Hp * Wp
+        # (num_patch = HP * Wp), dim_vector = channels of feature maps
+        output = self.backbone(img)  # apply backbone to get features of the image
         if self.with_neck:
             output = self.neck(output)
         if self.with_keypoint:
-            output = self.keypoint_head(output)
+            output = self.keypoint_head(output)  # 根据config的py文件跳转，如TopdownHeatmapSimpleHead
 
         # if return loss
         losses = dict()
@@ -168,16 +170,18 @@ class TopDown(BasePose):
             assert 'bbox_id' in img_metas[0]
 
         result = {}
-
-        features = self.backbone(img)
+        # features: batch * dim_vector * Hp * Wp
+        # (num_patch = HP * Wp), dim_vector = channels of feature maps
+        features = self.backbone(img)  # 1. backbone,e.g. vit to get features (Encoder)
         if self.with_neck:
             features = self.neck(features)
-        if self.with_keypoint:
-            output_heatmap = self.keypoint_head.inference_model(
+        if self.with_keypoint:  # 2. decoder, e.g. class decoder presented by VitPose: 2 deconvolution layers
+            output_heatmap = self.keypoint_head.inference_model(  # 根据config的py文件跳转，如TopdownHeatmapSimpleHead
                 features, flip_pairs=None)
 
+        # flip images and get results
         if self.test_cfg.get('flip_test', True):
-            img_flipped = img.flip(3)
+            img_flipped = img.flip(3)  # 按照index=3的轴对图像进行翻转
             features_flipped = self.backbone(img_flipped)
             if self.with_neck:
                 features_flipped = self.neck(features_flipped)
@@ -187,8 +191,10 @@ class TopDown(BasePose):
                 output_heatmap = (output_heatmap +
                                   output_flipped_heatmap) * 0.5
 
+        # img_metas (list(dict)): Information about data augmentation
+        # Decode keypoints pixel position from heatmaps
         if self.with_keypoint:
-            keypoint_result = self.keypoint_head.decode(
+            keypoint_result = self.keypoint_head.decode(  # e.g. topdown_heatmap_base_head.py
                 img_metas, output_heatmap, img_size=[img_width, img_height])
             result.update(keypoint_result)
 

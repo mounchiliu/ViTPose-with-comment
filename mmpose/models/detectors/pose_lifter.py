@@ -18,6 +18,7 @@ except ImportError:
     from mmpose.core import auto_fp16
 
 
+# realization of 3D baseline
 @POSENETS.register_module()
 class PoseLifter(BasePose):
     """Pose lifter that lifts 2D pose to 3D pose.
@@ -195,8 +196,8 @@ class PoseLifter(BasePose):
                 output, target, target_weight)
             keypoint_accuracy = self.keypoint_head.get_accuracy(
                 output, target, target_weight, metas)
-            losses.update(keypoint_losses)
-            losses.update(keypoint_accuracy)
+            losses.update(keypoint_losses)  # keypoint_losses更新到dict中
+            losses.update(keypoint_accuracy)  # keypoint_accuracy更新到dict中
 
         # trajectory model
         if self.with_traj:
@@ -245,9 +246,13 @@ class PoseLifter(BasePose):
         if self.with_neck:
             features = self.neck(features)
         if self.with_keypoint:
-            output = self.keypoint_head.inference_model(features)
-            keypoint_result = self.keypoint_head.decode(metas, output)
-            results.update(keypoint_result)
+            # 根据baseline3d config文件定义，使用PoseLifter作为kp_head_encoder对输入数据进行编码获取特征图
+            output = self.keypoint_head.inference_model(features) # batch x num_kp x 3
+            # 初始化一个全0向量存放root position, 并和kp预测的坐标拼在一起
+            # root position定义为当前人的中心点的世界坐标，之后所有的中心点需要转到世界坐标系下
+            # 根据baseline3d config文件定义，使用TemporalRegressionHead作为kp_head_decoder输出结果
+            keypoint_result = self.keypoint_head.decode(metas, output)   # batch x (num_key + 1) x 3
+            results.update(keypoint_result)  # 赋值
 
         if self.with_traj:
             traj_features = self.traj_backbone(input)

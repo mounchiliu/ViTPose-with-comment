@@ -346,7 +346,7 @@ def inference_pose_lifter_model(model,
         assert poses_3d.shape[-1] == 3
         dummy_score = np.ones(
             poses_3d.shape[:-1] + (1, ), dtype=poses_3d.dtype)
-        poses_3d = np.concatenate((poses_3d, dummy_score), axis=-1)
+        poses_3d = np.concatenate((poses_3d, dummy_score), axis=-1)  # 转化为齐次坐标
     pose_results = []
     for pose_2d, pose_3d in zip(pose_sequences_2d, poses_3d):
         pose_result = pose_2d.copy()
