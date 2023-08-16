@@ -53,7 +53,7 @@ Solution: delete `libxcb.so` works
 
 - ImportError: cannot import name 'inference_top_down_pose_model' from 'mmpose.apis' (/home/mengqi/work/Env/anaconda3/lib/python3.10/site-packages/mmpose/apis/__init__.py)
 
-Solution: mmpose版本兼容问题，将inference_top_down_pose_model替换为MMPoseInferencer
+Solution: mmpose版本兼容问题，(工程内规定mmcv>1.38且<=1.5, 并且提供了custom mmpose），如果先导入mmcv再mmpose，就会在系统环境内搜索mmpose，而工程实现使用的是作者提供的mmpose库，因此需要更换导入的顺序，即在报错的代码中（e.g. body3d_two_stage_img_demo.py, 修改import库的顺序，import mmpose 之后再 import mmcv）
 
 ### 2. Train the model
 - 注意:对于自定义数据集，需在configs文件下指定dataset相关路径，如`ViTPose_base_coco_256x192.py`中需要指定`bbox_file`、`ann_file``、img_prefix`
