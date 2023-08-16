@@ -51,6 +51,10 @@ Available platform plugins are: xcb, eglfs, minimal, minimalegl, offscreen, vnc,
   
 Solution: delete `libxcb.so` works
 
+- ImportError: cannot import name 'inference_top_down_pose_model' from 'mmpose.apis' (/home/mengqi/work/Env/anaconda3/lib/python3.10/site-packages/mmpose/apis/__init__.py)
+
+Solution: mmpose版本兼容问题，将inference_top_down_pose_model替换为MMPoseInferencer
+
 ### 2. Train the model
 - 注意:对于自定义数据集，需在configs文件下指定dataset相关路径，如`ViTPose_base_coco_256x192.py`中需要指定`bbox_file`、`ann_file``、img_prefix`
 - data preparation可参考[2d_body_keypoint.md](https://github.com/ViTAE-Transformer/ViTPose/blob/d5216452796c90c6bc29f5c5ec0bdba94366768a/docs/en/tasks/2d_body_keypoint.md)，需使用HRNet提供的people detection的bbox结果jason文件，下载见上述链接内。
