@@ -82,5 +82,5 @@ Available platform plugins are: xcb, eglfs, minimal, minimalegl, offscreen, vnc,
 
 - ImportError: cannot import name 'inference_top_down_pose_model' from 'mmpose.apis' (/home/mengqi/work/Env/anaconda3/lib/python3.10/site-packages/mmpose/apis/__init__.py)
 
-  Solution: mmpose版本兼容问题，(工程内规定mmcv>1.38且<=1.5, 并且提供了custom mmpose），如果先导入mmcv再mmpose，就会在系统环境内搜索mmpose，而工程实现使用的是作者提供的mmpose库，因此需要更换导入的顺序，即在报错的代码中（e.g. body3d_two_stage_img_demo.py, 修改import库的顺序，import mmpose 之后再 import mmcv）
+  Solution: mmpose版本兼容问题，(工程内规定mmcv>1.38且<=1.5, 并且提供了custom mmpose,版本为0.24），而pip install mmpose的版本为1.0，不兼容，目前debug模式下可跑通代码，run不可
 
