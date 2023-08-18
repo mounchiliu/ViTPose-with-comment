@@ -84,5 +84,5 @@ Available platform plugins are: xcb, eglfs, minimal, minimalegl, offscreen, vnc,
 
   Solution: mmpose版本兼容问题，(工程内规定mmcv>1.38且<=1.5, 并且提供了custom mmpose,版本为0.24），而pip install mmpose的版本为1.0，不兼容。因此在pycharm中-run configuration-more options-勾选Add contents root to PYTHONPATH 与 Add source root to PYTHONPATH。再次运行程序。
   
-  否则，需要按照./demo/MMPose_Tutorial.ipynb安装对应版本mmpose和mmcv
+  否则，需要按照/demo/MMPose_Tutorial.ipynb安装对应版本mmpose和mmcv
 
